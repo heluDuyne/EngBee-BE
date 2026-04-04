@@ -1,0 +1,22 @@
+{
+  "entryFile": "src/server.ts",
+  "noImplicitAdditionalProperties": "throw-on-extras",
+  "controllerPathGlobs": ["src/controllers/**/*.controller.ts"],
+  "spec": {
+    "outputDirectory": "src",
+    "specVersion": 3,
+    "name": "EngBee API",
+    "description": "EngBee Backend API Documentation",
+    "version": "1.0.0",
+    "contact": {
+      "name": "EngBee"
+    }
+  },
+  "routes": {
+    "routesDir": "src",
+    "routesFileName": "routes.ts",
+    "middleware": "express",
+    "basePath": "/api",
+    "authenticationModule": "./src/authentication.ts"
+  }
+}
