@@ -10,11 +10,13 @@ import {
   Index,
 } from "typeorm";
 import { LearnerProfile } from "./LearnerProfile";
+import { TeacherProfile } from "./TeacherProfile";
 import { Attempt } from "./Attempt";
 import { Prompt } from "./Prompt";
 import { Feedback } from "./Feedback";
 import { Class } from "./Class";
 import { AIRule } from "./AIRule";
+import { Course } from "./Course";
 import { UserRole, UserStatus, UILanguage } from "../enums";
 
 @Entity("users")
@@ -81,6 +83,12 @@ export class User {
   })
   learnerProfile?: LearnerProfile;
 
+  @OneToOne(() => TeacherProfile, (profile) => profile.user, {
+    cascade: true,
+    onDelete: "CASCADE",
+  })
+  teacherProfile?: TeacherProfile;
+
   @OneToMany(() => Attempt, (attempt) => attempt.learner)
   attempts?: Attempt[];
 
@@ -98,4 +106,7 @@ export class User {
 
   @OneToMany(() => AIRule, (rule) => rule.teacher)
   aiRules?: AIRule[];
+
+  @OneToMany(() => Course, (course) => course.creator)
+  createdCourses?: Course[];
 }

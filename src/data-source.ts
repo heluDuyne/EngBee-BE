@@ -3,6 +3,7 @@ import { DataSource } from "typeorm";
 import * as dotenv from "dotenv";
 import { User } from "./entities/User";
 import { LearnerProfile } from "./entities/LearnerProfile";
+import { TeacherProfile } from "./entities/TeacherProfile";
 import { Prompt } from "./entities/Prompt";
 import { Attempt } from "./entities/Attempt";
 import { AttemptMedia } from "./entities/AttemptMedia";
@@ -10,8 +11,13 @@ import { ScoringJob } from "./entities/ScoringJob";
 import { Score } from "./entities/Score";
 import { Feedback } from "./entities/Feedback";
 import { Class } from "./entities/Class";
+import { Notification } from "./entities/Notification";
 import { Assignment } from "./entities/Assignment";
 import { AIRule } from "./entities/AIRule";
+import { Course } from "./entities/Course";
+import { Task } from "./entities/Task";
+import { TaskAssignment } from "./entities/TaskAssignment";
+import { TaskSubmission } from "./entities/TaskSubmission";
 
 dotenv.config();
 
@@ -42,7 +48,7 @@ export const AppDataSource = new DataSource({
   database: DB_NAME || "engbee_db",
   synchronize: true,
   logging: TYPEORM_LOGGING === "true",
-  entities: [User, LearnerProfile, Prompt, Attempt, AttemptMedia, ScoringJob, Score, Feedback, Class, Assignment, AIRule],
+  entities: [User, LearnerProfile, TeacherProfile, Prompt, Attempt, AttemptMedia, ScoringJob, Score, Feedback, Class, Notification, Assignment, AIRule, Course, Task, TaskAssignment, TaskSubmission],
   // For migrations: works with both ts-node (src/**) and compiled output (dist/**)
   migrations: [
     __dirname + "/migrations/*.ts",

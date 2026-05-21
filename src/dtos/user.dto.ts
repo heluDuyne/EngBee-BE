@@ -52,6 +52,7 @@ export class UpdateUserDTO {
   bio?: string;
   phone?: string;
   location?: string;
+  teacherProfile?: { specializations?: string[] };
 }
 
 
@@ -116,6 +117,7 @@ export class UserResponseDTO {
  */
 export class UserDetailResponseDTO extends UserResponseDTO {
   learnerProfile?: LearnerProfileResponseDTO;
+  teacherProfile?: TeacherProfileResponseDTO;
   taughtClasses?: ClassResponseDTO[];
   enrolledClasses?: ClassResponseDTO[];
 }
@@ -145,4 +147,5 @@ export class UserListDTO {
 
 // Nested DTOs
 import { LearnerProfileResponseDTO } from "./learner-profile.dto";
+import { TeacherProfileResponseDTO } from "./teacher-profile.dto";
 import { ClassResponseDTO } from "./class.dto";

@@ -13,12 +13,18 @@ export class CloudinaryService {
 
   async uploadFile(file: any, folder: string = 'engbee/submissions'): Promise<string> {
     return new Promise((resolve, reject) => {
+        let options: any = { 
+            folder: folder,
+            resource_type: "auto" 
+        };
+
+        if (file.originalname) {
+            options.public_id = file.originalname;
+        }
+
         // Use upload_stream for buffer
         const uploadStream = cloudinary.uploader.upload_stream(
-            { 
-                folder: folder,
-                resource_type: "auto" 
-            },
+            options,
             (error, result) => {
                 if (error) {
                     console.error("Cloudinary upload error:", error);

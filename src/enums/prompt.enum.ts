@@ -5,6 +5,8 @@
 export enum SkillType {
   SPEAKING = "speaking",
   WRITING = "writing",
+  LISTENING = "listening",
+  READING = "reading",
 }
 
 /**

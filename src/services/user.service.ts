@@ -8,6 +8,7 @@ import {
   UserListDTO,
 } from "../dtos/user.dto";
 import { User } from "../entities/User";
+import { TeacherProfile } from "../entities/TeacherProfile";
 import { UserRole, UserStatus } from "../enums";
 import { createPaginatedResponse } from "../utils/pagination.utils";
 import { PaginatedResponseDTO } from "../dtos/pagination.dto";
@@ -15,6 +16,7 @@ import { NotFoundException, ConflictException, InternalServerErrorException } fr
 
 export class UserService {
   private userRepository = AppDataSource.getRepository(User);
+  private teacherProfileRepository = AppDataSource.getRepository(TeacherProfile);
 
   // Create user
   async createUser(dto: CreateUserDTO): Promise<UserResponseDTO> {
@@ -41,7 +43,7 @@ export class UserService {
   async getUserById(id: string): Promise<UserDetailResponseDTO> {
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: ["learnerProfile", "taughtClasses", "enrolledClasses"],
+      relations: ["learnerProfile", "teacherProfile", "taughtClasses", "enrolledClasses"],
     });
 
     if (!user) {
@@ -117,9 +119,11 @@ export class UserService {
     return users.map(user => this.mapToListDTO(user));
   }
 
-  // Update user
   async updateUser(id: string, dto: UpdateUserDTO): Promise<UserResponseDTO> {
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({ 
+        where: { id },
+        relations: ["teacherProfile"]
+    });
     if (!user) {
       throw new NotFoundException(`User with ID '${id}' not found`);
     }
@@ -144,6 +148,19 @@ export class UserService {
     if (dto.role !== undefined) user.role = dto.role;
     if (dto.status !== undefined) user.status = dto.status;
     if (dto.uiLanguage !== undefined) user.uiLanguage = dto.uiLanguage;
+
+    if (dto.teacherProfile) {
+      if (!user.teacherProfile) {
+        user.teacherProfile = this.teacherProfileRepository.create({
+          userId: user.id,
+          specializations: dto.teacherProfile.specializations,
+        });
+      } else {
+        if (dto.teacherProfile.specializations !== undefined) {
+          user.teacherProfile.specializations = dto.teacherProfile.specializations;
+        }
+      }
+    }
 
     await this.userRepository.save(user); // Use save to trigger @UpdateDateColumn and potentially hooks if added
     
@@ -255,6 +272,13 @@ export class UserService {
             currentBand: user.learnerProfile.currentBand,
             nativeLanguage: user.learnerProfile.nativeLanguage,
             learningGoals: user.learnerProfile.learningGoals,
+          }
+        : undefined,
+      teacherProfile: user.teacherProfile
+        ? {
+            id: user.teacherProfile.id,
+            userId: user.teacherProfile.userId,
+            specializations: user.teacherProfile.specializations,
           }
         : undefined,
       taughtClasses: user.taughtClasses?.map((c) => ({

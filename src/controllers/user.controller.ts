@@ -62,8 +62,11 @@ export class UserController extends Controller {
 
   /**
    * Get all users with pagination
+   * Requires: Authenticated user (Admin only)
    */
   @Get()
+  @Security("bearer", ["admin"])
+  @AdminOnly()
   async getAllUsers(
     @Query() limit: number = 10,
     @Query() offset: number = 0
@@ -124,28 +127,28 @@ export class UserController extends Controller {
 
   /**
    * Lock user account
-   * Requires: Authenticated user (Teacher or Admin)
+   * Requires: Authenticated user (Admin only)
    */
   @Put("{id}/lock")
   @Response<UserResponseDTO>(200, "User locked successfully")
   @Response(404, "User not found")
   @Response(401, "Unauthorized - must be logged in")
-  @Security("bearer")
-  @Authenticated()
+  @Security("bearer", ["admin"])
+  @AdminOnly()
   async lockUserAccount(@Path() id: string): Promise<UserResponseDTO> {
     return await this.userService.lockUserAccount(id);
   }
 
   /**
    * Unlock user account
-   * Requires: Authenticated user (Teacher or Admin)
+   * Requires: Authenticated user (Admin only)
    */
   @Put("{id}/unlock")
   @Response<UserResponseDTO>(200, "User unlocked successfully")
   @Response(404, "User not found")
   @Response(401, "Unauthorized - must be logged in")
-  @Security("bearer")
-  @Authenticated()
+  @Security("bearer", ["admin"])
+  @AdminOnly()
   async unlockUserAccount(@Path() id: string): Promise<UserResponseDTO> {
     return await this.userService.unlockUserAccount(id);
   }
@@ -163,14 +166,14 @@ export class UserController extends Controller {
 
   /**
    * Delete user
-   * Requires: Authenticated user (Teacher or Admin)
+   * Requires: Authenticated user (Admin only)
    */
   @Delete("{id}")
   @Response(204, "User deleted successfully")
   @Response(404, "User not found")
   @Response(401, "Unauthorized - must be logged in")
-  @Security("bearer")
-  @Authenticated()
+  @Security("bearer", ["admin"])
+  @AdminOnly()
   async deleteUser(@Path() id: string): Promise<void> {
     await this.userService.deleteUser(id);
     this.setStatus(204);

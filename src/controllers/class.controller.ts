@@ -26,7 +26,7 @@ import {
 } from "../dtos/class.dto";
 import { PaginatedResponseDTO } from "../dtos/pagination.dto";
 import { ClassService } from "../services/class.service";
-import { TeacherOnly, Authenticated } from "../decorators/auth.decorator";
+import { TeacherOnly, Authenticated, AdminOnly } from "../decorators/auth.decorator";
 import { AuthRequest } from "../middleware/auth.middleware";
 
 @Route("/classes")
@@ -42,7 +42,7 @@ export class ClassController extends Controller {
   @Response(401, "Unauthorized - must be logged in")
   @Response(403, "Forbidden - only teachers and admins can create classes")
   @Security("bearer")
-  @TeacherOnly()
+  @AdminOnly()
   async createClass(@Body() dto: CreateClassDTO): Promise<ClassResponseDTO> {
     return await this.classService.createClass(dto);
   }
@@ -57,6 +57,30 @@ export class ClassController extends Controller {
   @Authenticated()
   async getClassById(@Path() id: string): Promise<ClassDetailDTO> {
     return await this.classService.getClassById(id);
+  }
+
+  /**
+   * Get enrolled classes for the current learner
+   */
+  @Get("learner/enrolled")
+  @Response(200, "Classes retrieved successfully")
+  @Security("bearer")
+  @Authenticated()
+  async getLearnerClasses(@Request() request: any): Promise<any[]> {
+    const authRequest = request as AuthRequest;
+    return await this.classService.getLearnerClasses(authRequest.user!.id);
+  }
+
+  /**
+   * Get tasks assigned to a class
+   */
+  @Get("{id}/tasks")
+  @Response(200, "Tasks retrieved successfully")
+  @Response(404, "Class not found")
+  @Security("bearer")
+  @Authenticated()
+  async getClassTasks(@Path() id: string): Promise<any[]> {
+    return await this.classService.getClassTasks(id);
   }
 
   /**
@@ -130,7 +154,7 @@ export class ClassController extends Controller {
   @Response(401, "Unauthorized - must be logged in")
   @Response(403, "Forbidden - only teachers and admins can update classes")
   @Security("bearer")
-  @TeacherOnly()
+  @AdminOnly()
   async updateClass(
     @Path() id: string,
     @Body() dto: UpdateClassDTO
@@ -147,7 +171,7 @@ export class ClassController extends Controller {
   @Response(401, "Unauthorized - must be logged in")
   @Response(403, "Forbidden - only teachers and admins can enroll learners")
   @Security("bearer")
-  @TeacherOnly()
+  @AdminOnly()
   async enrollLearner(
     @Path() id: string,
     @Body() dto: EnrollLearnerDTO
@@ -180,7 +204,7 @@ export class ClassController extends Controller {
   @Response(401, "Unauthorized - must be logged in")
   @Response(403, "Forbidden - only teachers and admins can remove learners")
   @Security("bearer")
-  @TeacherOnly()
+  @AdminOnly()
   async removeLearner(
     @Path() id: string,
     @Body() dto: RemoveLearnerDTO
@@ -217,7 +241,7 @@ export class ClassController extends Controller {
   @Response(401, "Unauthorized - must be logged in")
   @Response(403, "Forbidden - only teachers and admins can delete classes")
   @Security("bearer")
-  @TeacherOnly()
+  @AdminOnly()
   async deleteClass(@Path() id: string): Promise<void> {
     await this.classService.deleteClass(id);
     this.setStatus(204);

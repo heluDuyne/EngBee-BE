@@ -16,6 +16,8 @@ import { User } from "../entities/User";
 import { createPaginatedResponse } from "../utils/pagination.utils";
 import { PaginatedResponseDTO } from "../dtos/pagination.dto";
 import { NotFoundException, ConflictException, InternalServerErrorException } from "../exceptions/HttpException";
+import { TaskAssignment } from "../entities/TaskAssignment";
+import { AssigneeType, TaskStatus } from "../enums";
 
 export class ClassService {
   private classRepository = AppDataSource.getRepository(Class);
@@ -261,6 +263,43 @@ export class ClassService {
       .take(limit)
       .getMany();
     return classes.map((c) => this.mapToListDTO(c));
+  }
+
+  // Get class tasks
+  async getClassTasks(classId: string): Promise<any[]> {
+    const classs = await this.classRepository.findOne({ where: { id: classId } });
+    if (!classs) {
+      throw new NotFoundException(`Class with ID '${classId}' not found`);
+    }
+
+    const assignments = await AppDataSource.getRepository(TaskAssignment).find({
+      where: { assigneeType: AssigneeType.CLASS, assigneeId: classId },
+      relations: ["task"],
+      order: { createdAt: "DESC" },
+    });
+
+    const validAssignments = assignments.filter(
+      (a) => a.task && (a.task.status === TaskStatus.APPROVED || a.task.status === TaskStatus.PUBLISHED)
+    );
+
+    // Map the task to a simple response (re-using Task structure)
+    return validAssignments.map((a) => ({
+      assignmentId: a.id,
+      dueDate: a.dueDate,
+      task: a.task,
+    }));
+  }
+
+  // Get enrolled classes for learner
+  async getLearnerClasses(learnerId: string): Promise<any[]> {
+    const user = await this.userRepository.findOne({
+      where: { id: learnerId },
+      relations: ["enrolledClasses", "enrolledClasses.teacher"],
+    });
+    if (!user) {
+      throw new NotFoundException(`Learner with ID '${learnerId}' not found`);
+    }
+    return (user.enrolledClasses || []).map(c => this.mapToDetailDTO(c));
   }
 
   // Get learner count

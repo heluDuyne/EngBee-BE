@@ -23,8 +23,13 @@ export const errorHandler = (
     status,
   };
 
-  if (process.env.NODE_ENV === "development" && err.details) {
-    errorResponse.details = err.details;
+  if (true) {
+    if (err.details) {
+      errorResponse.details = err.details;
+    } else if (err.fields) {
+      errorResponse.details = err.fields;
+      console.error('Validation fields:', err.fields);
+    }
   }
 
   res.status(status).json(errorResponse);

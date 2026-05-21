@@ -368,11 +368,6 @@ async function seedDatabase(): Promise<SeedResult> {
             deadline,
             status: AssignmentStatus.ACTIVE,
             allowLateSubmission: true,
-            aiRuleId:
-              config.aiRuleIndex < result.aiRules.length
-                ? result.aiRules[config.aiRuleIndex].id
-                : undefined,
-            enableAIScoring: true, // Enable AI scoring for seeded assignments
           };
 
           const response = await assignmentService.createAssignment(createDTO);

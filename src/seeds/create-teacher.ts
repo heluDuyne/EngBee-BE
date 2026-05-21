@@ -55,11 +55,35 @@ const seedUsers = async () => {
             console.log("Student already exists.");
         }
 
+        // 3. Seed Admin
+        const adminEmail = "admin@example.com";
+        const adminPassword = "password123";
+        let admin = await userRepository.findOneBy({ email: adminEmail });
+
+        if (!admin) {
+            console.log("Creating default admin...");
+            const hashedPassword = await bcrypt.hash(adminPassword, 10);
+            admin = userRepository.create({
+                email: adminEmail,
+                password: hashedPassword,
+                role: UserRole.ADMIN,
+                firstName: "Alex",
+                lastName: "Admin",
+                uiLanguage: UILanguage.EN,
+                status: UserStatus.ACTIVE
+            });
+            await userRepository.save(admin);
+            console.log("Admin created.");
+        } else {
+            console.log("Admin already exists.");
+        }
+
         console.log("\n✅ Seeding complete!");
         console.log("-----------------------------------------");
         console.log("Credential Summary:");
         console.log(`Teacher: ${teacherEmail} / ${teacherPassword}`);
         console.log(`Student: ${studentEmail} / ${studentPassword}`);
+        console.log(`Admin: ${adminEmail} / ${adminPassword}`);
         console.log("-----------------------------------------");
 
         process.exit(0);
