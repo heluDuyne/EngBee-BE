@@ -36,6 +36,7 @@ export class NotificationService {
       title: n.title,
       message: n.message,
       type: n.type,
+      link: n.link,
       isRead: n.isRead,
       createdAt: n.createdAt,
     };

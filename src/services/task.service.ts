@@ -17,6 +17,7 @@ import {
 import { BadRequestException, NotFoundException, ForbiddenException } from "../exceptions/HttpException";
 import { AssigneeType, TaskSubmissionStatus, TaskStatus, NotificationType, UserRole, SkillType } from "../enums";
 import { NotificationService } from "./notification.service";
+import { geminiService } from "./gemini.service";
 
 export class TaskService {
   private taskRepository = AppDataSource.getRepository(Task);
@@ -28,8 +29,9 @@ export class TaskService {
   private notificationService = new NotificationService();
 
   async createTask(creatorId: string, dto: CreateTaskDTO, isAdmin: boolean = false): Promise<TaskResponseDTO> {
+    let course: Course | null = null;
     if (dto.courseId) {
-      const course = await this.courseRepository.findOne({ where: { id: dto.courseId } });
+      course = await this.courseRepository.findOne({ where: { id: dto.courseId } });
       if (!course) throw new NotFoundException("Course not found");
       if (!isAdmin && course.creatorId !== creatorId) throw new ForbiddenException("Not authorized");
     }
@@ -39,11 +41,43 @@ export class TaskService {
       creatorId,
     });
     
+    if (course) {
+      task.course = course;
+    }
+    
     if (dto.maxScore === undefined) {
       task.maxScore = (dto.type === SkillType.SPEAKING || dto.type === SkillType.WRITING) ? 9.0 : 100;
     }
 
     await this.taskRepository.save(task);
+
+    if (dto.courseId) {
+      const assignment = this.assignmentRepository.create({
+        taskId: task.id,
+        assigneeType: AssigneeType.COURSE,
+        assigneeId: dto.courseId,
+        dueDate: new Date(new Date().setFullYear(new Date().getFullYear() + 10)),
+      });
+      await this.assignmentRepository.save(assignment);
+
+      // Notify enrolled students
+      const courseWithStudents = await this.courseRepository.findOne({
+        where: { id: dto.courseId },
+        relations: ["enrolledStudents"]
+      });
+      if (courseWithStudents?.enrolledStudents) {
+        courseWithStudents.enrolledStudents.forEach(student => {
+          this.notificationService.createNotification({
+            userId: student.id,
+            title: "New Lesson Added",
+            message: `A new lesson "${task.title}" has been added to the course "${courseWithStudents.title}".`,
+            type: NotificationType.SYSTEM,
+            link: `/course/${dto.courseId}`
+          }).catch(console.error);
+        });
+      }
+    }
+
     return this.mapToResponseDTO(task);
   }
 
@@ -101,23 +135,23 @@ export class TaskService {
   async getLearnerTasks(learnerId: string): Promise<LearnerTaskResponseDTO[]> {
     const user = await this.userRepository.findOne({
       where: { id: learnerId },
-      relations: ["enrolledClasses"],
+      relations: ["enrolledClasses", "enrolledCourses"],
     });
     if (!user) throw new NotFoundException("User not found");
 
     const classIds = user.enrolledClasses?.map((c) => c.id) || [];
+    const courseIds = user.enrolledCourses?.map((c) => c.id) || [];
 
     const assignments = await this.assignmentRepository.find({
       where: [
         { assigneeType: AssigneeType.INDIVIDUAL, assigneeId: learnerId },
         ...(classIds.length > 0 ? classIds.map(id => ({ assigneeType: AssigneeType.CLASS, assigneeId: id })) : []),
+        ...(courseIds.length > 0 ? courseIds.map(id => ({ assigneeType: AssigneeType.COURSE, assigneeId: id })) : []),
       ],
       relations: ["task"],
     });
 
-    const validAssignments = assignments.filter(
-      (a) => a.task && (a.task.status === TaskStatus.APPROVED || a.task.status === TaskStatus.PUBLISHED)
-    );
+    const validAssignments = assignments.filter((a) => a.task);
 
     const submissions = await this.submissionRepository.find({
       where: { learnerId },
@@ -279,19 +313,43 @@ export class TaskService {
     learnerId: string,
     dto: SubmitTaskDTO
   ): Promise<TaskSubmission> {
-    const assignment = await this.assignmentRepository.findOne({
+    let assignment = await this.assignmentRepository.findOne({
       where: { id: assignmentId },
       relations: ["task"],
     });
+    
+    if (!assignment) {
+      const task = await this.taskRepository.findOne({ where: { id: assignmentId } });
+      if (task && task.courseId) {
+        assignment = await this.assignmentRepository.findOne({
+          where: { taskId: task.id, assigneeType: AssigneeType.COURSE, assigneeId: task.courseId },
+          relations: ["task"],
+        });
+        if (!assignment) {
+          assignment = this.assignmentRepository.create({
+            taskId: task.id,
+            assigneeType: AssigneeType.COURSE,
+            assigneeId: task.courseId,
+            dueDate: new Date(new Date().setFullYear(new Date().getFullYear() + 10)),
+          });
+          await this.assignmentRepository.save(assignment);
+          assignment.task = task;
+        }
+      }
+    }
+    
     if (!assignment) throw new NotFoundException("Assignment not found");
+    
+    // Update assignmentId to the real assignment id if we fell back
+    assignmentId = assignment.id;
 
     // Let's assume the user is allowed to submit for now (could check enrollment)
     const existing = await this.submissionRepository.findOne({
       where: { assignmentId, learnerId },
     });
 
-    if (existing && existing.status === TaskSubmissionStatus.GRADED) {
-      throw new BadRequestException("Task already graded");
+    if (existing && existing.status !== TaskSubmissionStatus.PENDING) {
+      throw new BadRequestException("You have already submitted this task and cannot redo it.");
     }
 
     const submission = existing || this.submissionRepository.create({
@@ -305,6 +363,42 @@ export class TaskService {
     submission.status = TaskSubmissionStatus.SUBMITTED;
     submission.submittedAt = new Date();
 
+    const taskType = (assignment.task.type || "").toUpperCase();
+    if (taskType === "READING" || taskType === "LISTENING") {
+      if (assignment.task.questions && Array.isArray(assignment.task.questions)) {
+        let correctCount = 0;
+        let parsedAnswers: Record<string, string> = {};
+        try {
+          parsedAnswers = JSON.parse(dto.content || "{}");
+        } catch(e) {}
+        
+        assignment.task.questions.forEach((q: any, idx: number) => {
+          const qKey = q.id ? `${q.id}_${idx}` : `q_${idx}`;
+          const studentAnswer = parsedAnswers[qKey];
+          
+          if (studentAnswer !== undefined) {
+            // studentAnswer is usually the option text.
+            // q.correctAnswer is usually the index (e.g. "0", "1").
+            const correctIndex = parseInt(q.correctAnswer, 10);
+            let correctText = String(q.correctAnswer);
+            
+            if (!isNaN(correctIndex) && q.options && q.options[correctIndex]) {
+              const opt = q.options[correctIndex];
+              correctText = typeof opt === 'string' ? opt : String(opt.id || opt.text);
+            }
+            
+            if (String(studentAnswer) === String(q.correctAnswer) || String(studentAnswer) === correctText) {
+              correctCount++;
+            }
+          }
+        });
+        
+        const total = assignment.task.questions.length;
+        submission.score = total > 0 ? (correctCount / total) * assignment.task.maxScore : 0;
+        submission.status = TaskSubmissionStatus.GRADED;
+      }
+    }
+
     await this.submissionRepository.save(submission);
 
     // Notify teacher asynchronously
@@ -317,6 +411,7 @@ export class TaskService {
           title: "Task Submitted",
           message: `${learnerName} has submitted their answer for "${assignment.task.title}".`,
           type: NotificationType.TASK_SUBMITTED,
+          link: `/task/${assignment.task.id}`,
         });
       } catch (err) {
         console.error("Failed to send submission notification", err);
@@ -376,6 +471,7 @@ export class TaskService {
           title: "Task Graded",
           message: `Your submission for "${submission.assignment.task.title}" has been graded. Score: ${dto.score}`,
           type: NotificationType.TASK_GRADED,
+          link: `/task/${submission.assignment.task.id}`,
         });
       } catch (err) {
         console.error("Failed to send grade notification", err);
@@ -383,6 +479,39 @@ export class TaskService {
     })();
 
     return submission;
+  }
+
+  async evaluateSubmissionWithAI(
+    submissionId: string,
+    teacherId: string
+  ): Promise<any> {
+    const submission = await this.submissionRepository.findOne({
+      where: { id: submissionId },
+      relations: ["assignment", "assignment.task"],
+    });
+    if (!submission) throw new NotFoundException("Submission not found");
+    
+    if (submission.assignment.task.creatorId !== teacherId) {
+      throw new ForbiddenException("Not authorized");
+    }
+
+    const taskType = submission.assignment.task.type;
+    const promptText = `Task Title: ${submission.assignment.task.title}\nTask Description: ${submission.assignment.task.description || ""}`;
+    
+    let result: any;
+    if (taskType === SkillType.SPEAKING) {
+      if (!submission.audioUrl) throw new BadRequestException("No audio URL found for speaking submission");
+      result = await geminiService.evaluateAudio(submission.audioUrl, promptText);
+    } else if (taskType === SkillType.WRITING) {
+      if (!submission.content) throw new BadRequestException("No content found for writing submission");
+      result = await geminiService.evaluateWriting(submission.content, promptText);
+    } else {
+      throw new BadRequestException("AI evaluation is only supported for writing and speaking tasks");
+    }
+
+    submission.aiReview = result;
+    await this.submissionRepository.save(submission);
+    return result;
   }
 
   private mapToResponseDTO(task: Task): TaskResponseDTO {

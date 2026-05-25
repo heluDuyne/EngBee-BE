@@ -36,6 +36,9 @@ export class Notification {
   @Column({ type: "boolean", default: false })
   isRead!: boolean;
 
+  @Column({ type: "varchar", length: 255, nullable: true })
+  link?: string;
+
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;
 

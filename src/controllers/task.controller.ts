@@ -172,4 +172,14 @@ export class TaskController extends Controller {
   ): Promise<any> {
     return await this.taskService.gradeTask(submissionId, req.user.id, dto);
   }
+
+  @Post("submissions/{submissionId}/ai-review")
+  @Security("bearer")
+  @TeacherOnly()
+  async evaluateSubmissionWithAI(
+    @Path() submissionId: string,
+    @Request() req: any
+  ): Promise<any> {
+    return await this.taskService.evaluateSubmissionWithAI(submissionId, req.user.id);
+  }
 }

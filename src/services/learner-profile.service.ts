@@ -37,6 +37,7 @@ export class LearnerProfileService {
       lastName: dto.lastName,
       targetBand: dto.targetBand,
       nativeLanguage: dto.nativeLanguage,
+      level: dto.level,
       learningGoals: dto.learningGoals,
     });
 
@@ -170,6 +171,7 @@ export class LearnerProfileService {
       targetBand: profile.targetBand,
       currentBand: profile.currentBand,
       nativeLanguage: profile.nativeLanguage,
+      level: profile.level,
       learningGoals: profile.learningGoals,
     };
   }
@@ -183,6 +185,7 @@ export class LearnerProfileService {
       targetBand: profile.targetBand,
       currentBand: profile.currentBand,
       nativeLanguage: profile.nativeLanguage,
+      level: profile.level,
       learningGoals: profile.learningGoals,
       userName: profile.user?.email.split("@")[0],
       userEmail: profile.user?.email,

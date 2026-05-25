@@ -35,10 +35,13 @@ export class LearnerProfile {
   @Column({ type: "text", nullable: true })
   learningGoals?: string;
 
+  @Column({ type: "varchar", length: 50, nullable: true })
+  level?: string;
+
   // Inverse relation to User
   @OneToOne(() => User, (user) => user.learnerProfile, {
     onDelete: "CASCADE",
   })
-  @JoinColumn({ name: "user_id" })
+  @JoinColumn({ name: "userId" })
   user!: User;
 }

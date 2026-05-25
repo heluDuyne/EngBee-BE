@@ -82,7 +82,7 @@ const startServer = async (): Promise<void> => {
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (reason: any) => {
   console.error("Unhandled Rejection:", reason);
-  process.exit(1);
+  // process.exit(1); // Do not crash the server on unhandled rejections
 });
 
 // Start the application

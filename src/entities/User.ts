@@ -109,4 +109,7 @@ export class User {
 
   @OneToMany(() => Course, (course) => course.creator)
   createdCourses?: Course[];
+
+  @ManyToMany(() => Course, (course) => course.enrolledStudents)
+  enrolledCourses?: Course[];
 }

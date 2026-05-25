@@ -18,9 +18,14 @@ export class CreateAttemptDTO {
   learnerId!: string;
 
   /**
-   * ID of the prompt to attempt
+   * ID of the prompt to attempt (optional if practiceId is provided)
    */
-  promptId!: string;
+  promptId?: string;
+
+  /**
+   * ID of the practice to attempt (optional if promptId is provided)
+   */
+  practiceId?: string;
 
   skillType!: SkillType;
 
@@ -65,6 +70,15 @@ export class SubmitAttemptDTO {
   aiRuleId?: string;
 }
 
+export class SubmitPracticeScoreDTO {
+  practiceId!: string;
+  skillType!: SkillType;
+  score!: number;
+  correctCount?: number;
+  totalQuestions?: number;
+  answers?: any;
+}
+
 /**
  * @example {
  *   "score": 7.5,
@@ -105,7 +119,8 @@ export class GradeAttemptDTO {
 export class AttemptResponseDTO {
   id!: string;
   learnerId!: string;
-  promptId!: string;
+  promptId?: string;
+  practiceId?: string;
   skillType!: SkillType;
   status!: AttemptStatus;
   createdAt!: Date;
@@ -127,7 +142,8 @@ export class AttemptResponseDTO {
  */
 export class AttemptListDTO {
   id!: string;
-  promptId!: string;
+  promptId?: string;
+  practiceId?: string;
   skillType!: SkillType;
   status!: AttemptStatus;
   createdAt!: Date;

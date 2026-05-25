@@ -11,6 +11,7 @@ import {
 } from "typeorm";
 import { User } from "./User";
 import { Prompt } from "./Prompt";
+import { Practice } from "./Practice";
 import { AttemptMedia } from "./AttemptMedia";
 import { ScoringJob } from "./ScoringJob";
 import { Score } from "./Score";
@@ -29,8 +30,11 @@ export class Attempt {
   @Column({ type: "uuid" })
   learnerId!: string;
 
-  @Column({ type: "uuid" })
-  promptId!: string;
+  @Column({ type: "uuid", nullable: true })
+  promptId?: string;
+
+  @Column({ type: "uuid", nullable: true })
+  practiceId?: string;
 
   @Column({
     type: "enum",
@@ -67,9 +71,13 @@ export class Attempt {
   @JoinColumn({ name: "learner_id" })
   learner!: User;
 
-  @ManyToOne(() => Prompt, (prompt) => prompt.attempts)
+  @ManyToOne(() => Prompt, (prompt) => prompt.attempts, { nullable: true })
   @JoinColumn({ name: "prompt_id" })
-  prompt!: Prompt;
+  prompt?: Prompt;
+
+  @ManyToOne(() => Practice, { nullable: true, onDelete: "CASCADE" })
+  @JoinColumn({ name: "practice_id" })
+  practice?: Practice;
 
   @ManyToOne(() => Assignment, (assignment) => assignment.attempts)
   @JoinColumn({ name: "assignment_id" })

@@ -6,7 +6,9 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToMany,
+  ManyToMany,
   JoinColumn,
+  JoinTable,
   Index,
 } from "typeorm";
 import { User } from "./User";
@@ -43,6 +45,48 @@ export class Course {
   @Column({ type: "text", nullable: true })
   rejectionReason?: string;
 
+  @Column({ type: "varchar", length: 100, nullable: true })
+  category?: string;
+
+  @Column({ type: "int", default: 0 })
+  lessonCount!: number;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  duration?: string;
+
+  @Column({ type: "decimal", precision: 3, scale: 1, default: 0 })
+  rating!: number;
+
+  @Column({ type: "int", default: 0 })
+  reviewCount!: number;
+
+  @Column({ type: "int", default: 0 })
+  enrolled!: number;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  color?: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  icon?: string;
+
+  @Column({ type: "jsonb", nullable: true })
+  skills?: string[];
+
+  @Column({ type: "decimal", precision: 10, scale: 2, default: 0 })
+  price!: number;
+
+  @Column({ type: "boolean", default: true })
+  isFree!: boolean;
+
+  @Column({ type: "boolean", default: false })
+  isFeatured!: boolean;
+
+  @Column({ type: "jsonb", nullable: true })
+  curriculum?: any[];
+
+  @Column({ type: "jsonb", nullable: true })
+  reviews?: any[];
+
   @Column({ type: "timestamp", nullable: true })
   deletedAt?: Date;
 
@@ -64,4 +108,12 @@ export class Course {
 
   @OneToMany(() => Task, (task) => task.course)
   tasks?: Task[];
+
+  @ManyToMany(() => User, (user) => user.enrolledCourses)
+  @JoinTable({
+    name: "course_enrollments",
+    joinColumn: { name: "course_id", referencedColumnName: "id" },
+    inverseJoinColumn: { name: "user_id", referencedColumnName: "id" }
+  })
+  enrolledStudents?: User[];
 }

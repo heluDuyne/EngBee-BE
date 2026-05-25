@@ -15,6 +15,7 @@ import { Attempt } from "../entities/Attempt";
 import { AttemptStatus, SkillType } from "../enums";
 import { Prompt } from "../entities/Prompt";
 import { User } from "../entities/User";
+import { Practice } from "../entities/Practice";
 import { Score } from "../entities/Score";
 import { createPaginatedResponse } from "../utils/pagination.utils";
 import { PaginatedResponseDTO } from "../dtos/pagination.dto";
@@ -28,6 +29,7 @@ export class AttemptService {
   private attemptRepository = AppDataSource.getRepository(Attempt);
   private userRepository = AppDataSource.getRepository(User);
   private promptRepository = AppDataSource.getRepository(Prompt);
+  private practiceRepository = AppDataSource.getRepository(Practice);
   private scoreRepository = AppDataSource.getRepository(Score);
 
   // Create attempt
@@ -530,7 +532,67 @@ export class AttemptService {
     });
   }
 
+  // Submit practice score from frontend
+  async submitPracticeScore(learnerId: string, dto: import("../dtos/attempt.dto").SubmitPracticeScoreDTO): Promise<AttemptResponseDTO> {
+    const practice = await this.practiceRepository.findOne({ where: { id: dto.practiceId } });
+    if (!practice) {
+      throw new NotFoundException(`Practice with ID '${dto.practiceId}' not found`);
+    }
 
+    // Try to find an existing attempt for this practice and learner
+    let attempt = await this.attemptRepository.findOne({
+      where: { learnerId, practice: { id: dto.practiceId } },
+      relations: ["score"]
+    });
+
+    if (!attempt) {
+      attempt = this.attemptRepository.create({
+        learnerId,
+        practice: { id: dto.practiceId },
+        skillType: dto.skillType,
+        status: AttemptStatus.SCORED,
+        startedAt: new Date(),
+        submittedAt: new Date(),
+        scoredAt: new Date(),
+        content: JSON.stringify({ correctCount: dto.correctCount, totalQuestions: dto.totalQuestions, answers: dto.answers })
+      });
+      attempt = await this.attemptRepository.save(attempt);
+    } else {
+      attempt.status = AttemptStatus.SCORED;
+      attempt.scoredAt = new Date();
+      attempt.content = JSON.stringify({ correctCount: dto.correctCount, totalQuestions: dto.totalQuestions, answers: dto.answers });
+      attempt = await this.attemptRepository.save(attempt);
+    }
+
+    let score = attempt.score;
+    if (!score) {
+      score = this.scoreRepository.create({
+        attemptId: attempt.id,
+        overallBand: dto.score,
+        lexical: dto.score,
+        grammar: dto.score,
+        coherence: dto.score,
+        feedback: "Automatically scored practice.",
+        detailedFeedback: { correctCount: dto.correctCount, totalQuestions: dto.totalQuestions }
+      });
+    } else {
+      score.overallBand = dto.score;
+      score.detailedFeedback = { correctCount: dto.correctCount, totalQuestions: dto.totalQuestions };
+    }
+    await this.scoreRepository.save(score);
+
+    const updated = await this.attemptRepository.findOne({ where: { id: attempt.id } });
+    return this.mapToResponseDTO(updated!);
+  }
+
+  // Get previous attempt for a practice
+  async getMyPracticeAttempt(learnerId: string, practiceId: string): Promise<AttemptResponseDTO | null> {
+    const attempt = await this.attemptRepository.findOne({
+      where: { learnerId, practice: { id: practiceId } },
+      relations: ["score"]
+    });
+    return attempt ? this.mapToResponseDTO(attempt) : null;
+  }
 
   // Mappers
   private mapToResponseDTO(attempt: Attempt): AttemptResponseDTO {
@@ -584,8 +646,8 @@ export class AttemptService {
       submittedAt: attempt.submittedAt,
       scoredAt: attempt.scoredAt,
       content: attempt.content,
-      promptContent: attempt.prompt?.content,
-      promptDifficulty: attempt.prompt?.difficulty,
+      promptContent: attempt.prompt?.content || attempt.practice?.content,
+      promptDifficulty: attempt.prompt?.difficulty || attempt.practice?.level,
       media: attempt.media?.map((m) => ({
         id: m.id,
         mediaType: m.mediaType,
@@ -622,7 +684,7 @@ export class AttemptService {
         ? `${attempt.learner.firstName || ''} ${attempt.learner.lastName || ''}`.trim()
         : attempt.learner?.email || "Unknown Student",
       studentEmail: attempt.learner?.email,
-      assignmentTitle: attempt.assignment?.title || attempt.prompt?.content?.substring(0, 30) || "Untitled Task",
+      assignmentTitle: attempt.assignment?.title || attempt.prompt?.content?.substring(0, 30) || attempt.practice?.title || "Untitled Task",
       assignmentDescription: attempt.assignment?.description,
       className: attempt.assignment?.class?.name,
     };

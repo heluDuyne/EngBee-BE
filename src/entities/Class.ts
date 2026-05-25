@@ -43,7 +43,7 @@ export class Class {
   @ManyToOne(() => User, {
     onDelete: "CASCADE",
   })
-  @JoinColumn({ name: "teacher_id" })
+  @JoinColumn({ name: "teacherId" })
   teacher!: User;
 
   @ManyToMany(() => User, (user) => user.enrolledClasses, {

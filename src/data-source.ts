@@ -5,6 +5,7 @@ import { User } from "./entities/User";
 import { LearnerProfile } from "./entities/LearnerProfile";
 import { TeacherProfile } from "./entities/TeacherProfile";
 import { Prompt } from "./entities/Prompt";
+import { Practice } from "./entities/Practice";
 import { Attempt } from "./entities/Attempt";
 import { AttemptMedia } from "./entities/AttemptMedia";
 import { ScoringJob } from "./entities/ScoringJob";
@@ -48,7 +49,7 @@ export const AppDataSource = new DataSource({
   database: DB_NAME || "engbee_db",
   synchronize: true,
   logging: TYPEORM_LOGGING === "true",
-  entities: [User, LearnerProfile, TeacherProfile, Prompt, Attempt, AttemptMedia, ScoringJob, Score, Feedback, Class, Notification, Assignment, AIRule, Course, Task, TaskAssignment, TaskSubmission],
+  entities: [User, LearnerProfile, TeacherProfile, Prompt, Practice, Attempt, AttemptMedia, ScoringJob, Score, Feedback, Class, Notification, Assignment, AIRule, Course, Task, TaskAssignment, TaskSubmission],
   // For migrations: works with both ts-node (src/**) and compiled output (dist/**)
   migrations: [
     __dirname + "/migrations/*.ts",

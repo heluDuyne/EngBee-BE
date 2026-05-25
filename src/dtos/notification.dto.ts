@@ -5,6 +5,7 @@ export interface CreateNotificationDTO {
   title: string;
   message: string;
   type: NotificationType;
+  link?: string;
 }
 
 export interface NotificationResponseDTO {
@@ -12,6 +13,7 @@ export interface NotificationResponseDTO {
   title: string;
   message: string;
   type: NotificationType;
+  link?: string;
   isRead: boolean;
   createdAt: Date;
 }

@@ -18,10 +18,13 @@ import { PaginatedResponseDTO } from "../dtos/pagination.dto";
 import { NotFoundException, ConflictException, InternalServerErrorException } from "../exceptions/HttpException";
 import { TaskAssignment } from "../entities/TaskAssignment";
 import { AssigneeType, TaskStatus } from "../enums";
+import { NotificationService } from "./notification.service";
+import { NotificationType } from "../enums";
 
 export class ClassService {
   private classRepository = AppDataSource.getRepository(Class);
   private userRepository = AppDataSource.getRepository(User);
+  private notificationService = new NotificationService();
 
   // Create class
   async createClass(dto: CreateClassDTO): Promise<ClassResponseDTO> {
@@ -180,6 +183,21 @@ export class ClassService {
       throw new InternalServerErrorException(`Failed to enroll learner in class with ID '${classId}'`);
     }
 
+    // Notify teacher asynchronously
+    (async () => {
+      try {
+        await this.notificationService.createNotification({
+          userId: classs.teacherId,
+          title: "New Student Enrolled",
+          message: `${learner.firstName || learner.email} has enrolled in your class "${classs.name}".`,
+          type: NotificationType.CLASS_ENROLLED,
+          link: `/teacher/class/${classs.id}`,
+        });
+      } catch (err) {
+        console.error("Failed to send enroll notification", err);
+      }
+    })();
+
     return this.mapToDetailDTO(updated);
   }
 
@@ -215,6 +233,21 @@ export class ClassService {
     if (!updated) {
       throw new InternalServerErrorException(`Failed to enroll learner in class with code '${dto.code}'`);
     }
+
+    // Notify teacher asynchronously
+    (async () => {
+      try {
+        await this.notificationService.createNotification({
+          userId: classs.teacherId,
+          title: "New Student Enrolled",
+          message: `${learner.firstName || learner.email} has enrolled in your class "${classs.name}".`,
+          type: NotificationType.CLASS_ENROLLED,
+          link: `/teacher/class/${classs.id}`,
+        });
+      } catch (err) {
+        console.error("Failed to send enroll notification", err);
+      }
+    })();
 
     return this.mapToDetailDTO(updated);
   }
@@ -349,7 +382,11 @@ export class ClassService {
       createdAt: classs.createdAt,
       updatedAt: classs.updatedAt,
       teacherEmail: classs.teacher?.email,
-      teacherName: classs.teacher?.email.split("@")[0],
+      teacherName: (classs.teacher?.firstName && classs.teacher?.lastName) 
+        ? `${classs.teacher.firstName} ${classs.teacher.lastName}`
+        : classs.teacher?.firstName 
+          ? classs.teacher.firstName 
+          : classs.teacher?.email?.split("@")[0] || "?",
       learnerCount: classs.learners?.length || 0,
       learners: classs.learners
         ?.filter(l => l.id !== classs.teacherId)

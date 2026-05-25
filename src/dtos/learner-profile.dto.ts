@@ -9,6 +9,7 @@
  *   "lastName": "Doe",
  *   "targetBand": 7,
  *   "nativeLanguage": "Spanish",
+ *   "level": "intermediate",
  *   "learningGoals": "Improve speaking for immigration"
  * }
  */
@@ -28,6 +29,7 @@ export class CreateLearnerProfileDTO {
   targetBand?: number;
 
   nativeLanguage?: string;
+  level?: string;
   learningGoals?: string;
 }
 
@@ -55,6 +57,7 @@ export class UpdateLearnerProfileDTO {
   currentBand?: number;
 
   nativeLanguage?: string;
+  level?: string;
   learningGoals?: string;
 }
 
@@ -78,6 +81,7 @@ export class LearnerProfileResponseDTO {
   targetBand?: number;
   currentBand?: number;
   nativeLanguage?: string;
+  level?: string;
   learningGoals?: string;
 }
 

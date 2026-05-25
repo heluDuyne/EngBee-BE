@@ -22,6 +22,7 @@ import {
   AttemptDetailDTO,
   AttemptFilterDTO,
   GradeAttemptDTO,
+  SubmitPracticeScoreDTO,
 } from "../dtos/attempt.dto";
 import { AttemptService } from "../services/attempt.service";
 import { SkillType, AttemptStatus } from "../enums";
@@ -254,6 +255,36 @@ export class AttemptController extends Controller {
     await this.attemptService.deleteAttempt(id);
     this.setStatus(204);
   }
+
+  /**
+   * Submit practice score
+   */
+  @Post("practice/submit-score")
+  @Response(201, "Practice score submitted")
+  @Response(404, "Practice not found")
+  @Security("bearer")
+  @Authenticated()
+  async submitPracticeScore(
+    @Request() request: AuthRequest,
+    @Body() dto: SubmitPracticeScoreDTO
+  ): Promise<AttemptResponseDTO> {
+    return await this.attemptService.submitPracticeScore(request.user!.id, dto);
+  }
+
+  /**
+   * Get my previous attempt for a practice
+   */
+  @Get("practice/{practiceId}/my-attempt")
+  @Response(200, "Success")
+  @Security("bearer")
+  @Authenticated()
+  async getMyPracticeAttempt(
+    @Request() request: AuthRequest,
+    @Path() practiceId: string
+  ): Promise<AttemptResponseDTO | null> {
+    return await this.attemptService.getMyPracticeAttempt(request.user!.id, practiceId);
+  }
+
   /**
    * Get pending attempts for the authenticated teacher
    */

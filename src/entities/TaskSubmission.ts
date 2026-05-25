@@ -50,6 +50,9 @@ export class TaskSubmission {
   @Column({ type: "text", nullable: true })
   audioFeedbackUrl?: string;
 
+  @Column({ type: "jsonb", nullable: true })
+  aiReview?: any;
+
   @Column({ type: "timestamp", nullable: true })
   submittedAt?: Date;
 

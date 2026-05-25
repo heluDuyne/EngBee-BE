@@ -19,7 +19,11 @@ export class CloudinaryService {
         };
 
         if (file.originalname) {
-            options.public_id = file.originalname;
+            // Sanitize original name to avoid Cloudinary invalid public_id errors
+            // Remove extension, replace non-alphanumeric with underscore, limit length
+            const nameWithoutExt = file.originalname.substring(0, file.originalname.lastIndexOf('.')) || file.originalname;
+            const sanitized = nameWithoutExt.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+            options.public_id = `${sanitized}_${Date.now()}`;
         }
 
         // Use upload_stream for buffer
