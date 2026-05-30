@@ -43,6 +43,7 @@
     "multer": "^2.0.2",
     "pg": "^8.11.3",
     "reflect-metadata": "^0.1.13",
+    "socket.io": "^4.8.3",
     "swagger-ui-express": "^5.0.0",
     "tsoa": "^5.1.1",
     "typeorm": "^0.3.17"

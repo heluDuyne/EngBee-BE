@@ -1,5 +1,9 @@
 import "reflect-metadata";
 import express, { Application, Request, Response } from "express";
+import http from "http";
+import { Server as SocketIOServer, Socket } from "socket.io";
+import { ChatService } from "./services/chat.service";
+import { jwtAuthService } from "./services/jwt-auth.service";
 import cors from "cors";
 import swaggerUi from "swagger-ui-express";
 import { config } from "dotenv";
@@ -11,6 +15,10 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 config();
 
 const app: Application = express();
+const httpServer = http.createServer(app);
+const io = new SocketIOServer(httpServer, {
+  cors: { origin: "*" }
+});
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -66,12 +74,95 @@ const startServer = async (): Promise<void> => {
     // Initialize database connection
     await initializeDatabase();
 
-    // Start Express server
-    app.listen(PORT, () => {
+    // Socket.IO Logic
+    const chatService = new ChatService();
+    const connectedUsers = new Map<string, Set<string>>();
+
+    io.use((socket, next) => {
+      const token = socket.handshake.auth.token;
+      if (!token) return next(new Error("Authentication error: No token"));
+      try {
+        const decoded = jwtAuthService.verifyAccessToken(token);
+        socket.data.user = decoded;
+        next();
+      } catch (err) {
+        next(new Error("Authentication error: Invalid token"));
+      }
+    });
+
+    io.on("connection", (socket) => {
+      const userId = socket.data.user.id;
+      console.log(`🔌 User connected: ${userId} (Socket: ${socket.id})`);
+
+      if (!connectedUsers.has(userId)) connectedUsers.set(userId, new Set());
+      connectedUsers.get(userId)!.add(socket.id);
+      
+      // Broadcast online status globally for simplicity in this demo
+      io.emit("user_status", { userId, status: "online" });
+
+      // Fetch inbox
+      socket.on("get_inbox", async () => {
+        try {
+          const inbox = await chatService.getUserConversations(userId);
+          socket.emit("inbox_data", inbox);
+        } catch (error) {
+          console.error("Error fetching inbox:", error);
+        }
+      });
+
+      // Join a conversation to receive real-time messages
+      socket.on("join_conversation", async (conversationId) => {
+        try {
+          socket.join(conversationId);
+          const messages = await chatService.getConversationMessages(userId, conversationId, 50);
+          socket.emit("conversation_messages", { conversationId, messages });
+        } catch (error) {
+          console.error("Error joining conversation:", error);
+        }
+      });
+
+      // Leave conversation
+      socket.on("leave_conversation", (conversationId) => {
+        socket.leave(conversationId);
+      });
+
+      socket.on("send_message", async (data) => {
+        try {
+          const { conversationId, content } = data;
+          if (conversationId && content) {
+            const savedMessage = await chatService.saveMessage(userId, conversationId, content);
+            io.to(conversationId).emit("receive_message", savedMessage);
+            
+            // Notify other participants for inbox update
+            const convData = await chatService.getUserConversations(userId);
+            // In a real app we'd emit only to specific users, but for simplicity here we let clients refetch inbox
+            io.emit("inbox_updated", conversationId);
+          }
+        } catch (error) {
+          console.error("Error saving message:", error);
+          socket.emit("message_error", { error: "Failed to send message" });
+        }
+      });
+
+      socket.on("disconnect", () => {
+        console.log(`🔌 User disconnected: ${userId} (Socket: ${socket.id})`);
+        const userSockets = connectedUsers.get(userId);
+        if (userSockets) {
+          userSockets.delete(socket.id);
+          if (userSockets.size === 0) {
+            connectedUsers.delete(userId);
+            io.emit("user_status", { userId, status: "offline" });
+          }
+        }
+      });
+    });
+
+    // Start server
+    httpServer.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`🚀 EngBee is running on port ${PORT}`);
-      console.log(`📍 API Base URL: http://localhost:${PORT}/api`);
-      console.log(`📚 API Documentation: http://localhost:${PORT}/docs`);
-      console.log(`❤️  Health Check: http://localhost:${PORT}/health`);
+      console.log(`📍 API Base URL: http://0.0.0.0:${PORT}/api`);
+      console.log(`📚 API Documentation: http://0.0.0.0:${PORT}/docs`);
+      console.log(`❤️  Health Check: http://0.0.0.0:${PORT}/health`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);

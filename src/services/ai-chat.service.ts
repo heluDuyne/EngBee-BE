@@ -41,7 +41,7 @@ export class AIChatService {
       contextStr += `- Recent Practice/Assignments:\n`;
       recentAttempts.forEach((attempt, index) => {
         const title = attempt.practice?.title || attempt.assignment?.title || 'Unknown Task';
-        const scoreStr = attempt.score ? `Score: ${attempt.score.overallScore}` : 'Not scored yet';
+        const scoreStr = attempt.score ? `Score: ${attempt.score.overallBand}` : 'Not scored yet';
         contextStr += `  ${index + 1}. ${title} (${attempt.skillType}) - Status: ${attempt.status} - ${scoreStr}\n`;
       });
     }
@@ -74,7 +74,7 @@ export class AIChatService {
       throw new Error(`Gemini API Error: ${errText}`);
     }
 
-    const data = await response.json();
+    const data: any = await response.json();
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!reply) {

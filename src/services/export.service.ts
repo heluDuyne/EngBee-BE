@@ -158,7 +158,7 @@ export class ExportService {
     const attemptDetails: AttemptDetailRowDTO[] = attempts
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .map((attempt) => ({
-        promptId: attempt.promptId,
+        promptId: attempt.promptId || "",
         promptTitle: attempt.prompt?.content.substring(0, 100) || "",
         skillType: attempt.skillType as "speaking" | "writing",
         attemptDate: attempt.createdAt,

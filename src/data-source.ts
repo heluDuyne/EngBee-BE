@@ -19,6 +19,9 @@ import { Course } from "./entities/Course";
 import { Task } from "./entities/Task";
 import { TaskAssignment } from "./entities/TaskAssignment";
 import { TaskSubmission } from "./entities/TaskSubmission";
+import { ChatMessage } from "./entities/ChatMessage";
+import { ChatConversation } from "./entities/ChatConversation";
+import { ChatParticipant } from "./entities/ChatParticipant";
 
 dotenv.config();
 
@@ -49,7 +52,7 @@ export const AppDataSource = new DataSource({
   database: DB_NAME || "engbee_db",
   synchronize: true,
   logging: TYPEORM_LOGGING === "true",
-  entities: [User, LearnerProfile, TeacherProfile, Prompt, Practice, Attempt, AttemptMedia, ScoringJob, Score, Feedback, Class, Notification, Assignment, AIRule, Course, Task, TaskAssignment, TaskSubmission],
+  entities: [User, LearnerProfile, TeacherProfile, Prompt, Practice, Attempt, AttemptMedia, ScoringJob, Score, Feedback, Class, Notification, Assignment, AIRule, Course, Task, TaskAssignment, TaskSubmission, ChatConversation, ChatParticipant, ChatMessage],
   // For migrations: works with both ts-node (src/**) and compiled output (dist/**)
   migrations: [
     __dirname + "/migrations/*.ts",
