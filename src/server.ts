@@ -116,6 +116,14 @@ const startServer = async (): Promise<void> => {
           socket.join(conversationId);
           const messages = await chatService.getConversationMessages(userId, conversationId, 50);
           socket.emit("conversation_messages", { conversationId, messages });
+
+          // Notify all of this user's sockets to refresh their inbox/unread counts
+          const userSockets = connectedUsers.get(userId);
+          if (userSockets) {
+            for (const sid of userSockets) {
+              io.to(sid).emit("inbox_updated", conversationId);
+            }
+          }
         } catch (error) {
           console.error("Error joining conversation:", error);
         }

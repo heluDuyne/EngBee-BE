@@ -25,6 +25,9 @@ import {
   SubmitPracticeScoreDTO,
 } from "../dtos/attempt.dto";
 import { AttemptService } from "../services/attempt.service";
+import { geminiService } from "../services/gemini.service";
+import { AppDataSource } from "../data-source";
+import { Practice } from "../entities/Practice";
 import { SkillType, AttemptStatus } from "../enums";
 import { PaginatedResponseDTO } from "../dtos/pagination.dto";
 import { Authenticated, TeacherOnly } from "../decorators/auth.decorator";
@@ -283,6 +286,33 @@ export class AttemptController extends Controller {
     @Path() practiceId: string
   ): Promise<AttemptResponseDTO | null> {
     return await this.attemptService.getMyPracticeAttempt(request.user!.id, practiceId);
+  }
+
+  /**
+   * Evaluate a speaking practice audio synchronously
+   */
+  @Post("practice/{practiceId}/evaluate-speaking")
+  @Response(200, "Speaking evaluated")
+  @Response(404, "Practice not found")
+  @Security("bearer")
+  @Authenticated()
+  async evaluateSpeakingPractice(
+    @Path() practiceId: string,
+    @Body() dto: { audioUrl: string }
+  ): Promise<any> {
+    const practice = await AppDataSource.getRepository(Practice).findOne({ where: { id: practiceId } });
+    if (!practice) {
+      this.setStatus(404);
+      throw new Error(`Practice with ID '${practiceId}' not found`);
+    }
+
+    try {
+      const result = await geminiService.evaluateAudio(dto.audioUrl, practice.content);
+      return result;
+    } catch (error: any) {
+      this.setStatus(500);
+      throw new Error(error.message || "Failed to evaluate speaking audio");
+    }
   }
 
   /**

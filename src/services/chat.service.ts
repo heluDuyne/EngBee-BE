@@ -148,6 +148,7 @@ export class ChatService {
       let name = "Conversation";
       let otherUserId = null;
       let otherUserRole = null;
+      let otherUserAvatar = null;
 
       if (conv.type === ConversationType.DIRECT) {
         const otherP = conv.participants.find(pt => pt.userId !== userId);
@@ -158,6 +159,7 @@ export class ChatService {
           if (ou.role === UserRole.ADMIN) name = "Admin Support";
           else if (ou.firstName) name = `${ou.firstName} ${ou.lastName || ''}`.trim();
           else name = ou.email.split('@')[0];
+          otherUserAvatar = ou.avatar;
         }
       } else if (conv.type === ConversationType.CLASS) {
         const cls = await this.classRepository.findOne({ where: { id: conv.classId } });
@@ -170,12 +172,14 @@ export class ChatService {
         name,
         otherUserId,
         otherUserRole,
+        otherUserAvatar,
         unreadCount: p.unreadCount,
         lastMessage: lastMessage ? {
           content: lastMessage.content,
           createdAt: lastMessage.createdAt,
           senderId: lastMessage.sender.id,
-          senderName: lastMessage.sender.firstName || lastMessage.sender.email.split('@')[0]
+          senderName: lastMessage.sender.firstName || lastMessage.sender.email.split('@')[0],
+          senderAvatar: lastMessage.sender.avatar
         } : null
       });
     }
